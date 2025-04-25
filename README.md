@@ -2,11 +2,14 @@
 
 A FastAPI-based application that provides face recognition capabilities, including training face models, detecting faces in images, and real-time face recognition through a webcam.
 
+<img width="1176" alt="Screenshot 2025-04-26 at 1 55 20 AM" src="https://github.com/user-attachments/assets/e656513e-1b7b-4027-b3c6-bedf2821b07a" />
+
 ## Features
 
 - **Face Registration**: Upload face images with names to train the recognition model
 - **Face Detection**: Detect and identify faces in uploaded images
 - **Real-time Recognition**: Detect and identify faces in real-time using a webcam
+
 - **Model Management**: View and delete trained face models
 
 ## Getting Started
