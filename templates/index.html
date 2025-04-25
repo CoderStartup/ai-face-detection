@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Face Recognition System</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #f5f5f5;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .panel {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            flex: 1;
+            min-width: 300px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result-container {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        #resultImage {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 10px 0;
+        }
+        .face-box {
+            position: absolute;
+            border: 3px solid lime;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            box-sizing: border-box;
+        }
+        .face-label {
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px;
+            font-size: 12px;
+            text-align: center;
+        }
+        .known-faces {
+            list-style-type: none;
+            padding: 0;
+        }
+        .known-faces li {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+        }
+        .result-image-container {
+            position: relative;
+            display: inline-block;
+        }
+        .delete-btn {
+            background-color: #f44336;
+            padding: 5px 10px;
+            font-size: 14px;
+        }
+        .delete-btn:hover {
+            background-color: #d32f2f;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f1f1f1;
+            border: 1px solid #ccc;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            margin-right: 2px;
+        }
+        .tab.active {
+            background-color: white;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        #webcamContainer {
+            position: relative;
+            margin: 0 auto;
+            width: 100%;
+            max-width: 640px;
+        }
+        #webcam {
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .webcam-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+        .control-panel {
+            margin: 15px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+    </style>
+</head>
+<body>
+    <h1>Face Recognition System</h1>
+    
+    <div class="container">
+        <div class="panel">
+            <h2>Train New Face</h2>
+            <form id="trainForm">
+                <div class="form-group">
+                    <label for="name">Person's Name:</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="trainImage">Upload Face Image:</label>
+                    <input type="file" id="trainImage" name="file" accept="image/*" required>
+                </div>
+                <button type="submit">Add Face</button>
+            </form>
+            <div id="trainResult" class="result-container" style="display: none;"></div>
+            
+            <h2>Known Faces</h2>
+            <ul class="known-faces" id="knownFacesList">
+                {% for face in known_faces %}
+                    <li>
+                        {{ face }}
+                        <button class="delete-btn" onclick="deleteFace('{{ face }}')">Delete</button>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <div class="panel">
+            <h2>Detect Faces</h2>
+            
+            <div class="tabs">
+                <div class="tab active" data-tab="uploadTab">Upload Image</div>
+                <div class="tab" data-tab="webcamTab">Use Webcam</div>
+            </div>
+            
+            <div id="uploadTab" class="tab-content active">
+                <form id="detectForm">
+                    <div class="form-group">
+                        <label for="detectImage">Upload Image for Detection:</label>
+                        <input type="file" id="detectImage" name="file" accept="image/*" required>
+                    </div>
+                    <button type="submit">Detect Faces</button>
+                </form>
+                <div id="detectResult" class="result-container" style="display: none;">
+                    <h3>Detection Results</h3>
+                    <p id="detectionSummary"></p>
+                    <div class="result-image-container" id="resultImageContainer">
+                        <img id="resultImage" alt="Detection result">
+                    </div>
+                </div>
+            </div>
+            
+            <div id="webcamTab" class="tab-content">
+                <div class="control-panel">
+                    <button id="startWebcam" class="primary-btn">Start Webcam</button>
+                    <button id="stopWebcam" class="primary-btn" disabled>Stop Webcam</button>
+                </div>
+                <div id="webcamContainer">
+                    <video id="webcam" autoplay playsinline></video>
+                    <div id="webcamOverlay" class="webcam-overlay"></div>
+                </div>
+                <div id="webcamStatus" class="result-container" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching functionality
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remove active class from all tabs and tab contents
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Add active class to clicked tab and corresponding content
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+                
+                // If switching to webcam tab, stop webcam if it's running
+                if (tab.dataset.tab !== 'webcamTab' && webcamRunning) {
+                    stopWebcam();
+                }
+            });
+        });
+        
+        // Existing form handling code
+        document.getElementById('trainForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('name', document.getElementById('name').value);
+            formData.append('file', document.getElementById('trainImage').files[0]);
+            
+            fetch('/upload-training-face/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultDiv = document.getElementById('trainResult');
+                
+                if (data.error) {
+                    resultDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                } else {
+                    resultDiv.innerHTML = `<p style="color: green;">Successfully added ${data.name} to known faces!</p>`;
+                    // Refresh known faces list
+                    fetchKnownFaces();
+                }
+                
+                resultDiv.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('trainResult').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                document.getElementById('trainResult').style.display = 'block';
+            });
+        });
+        
+        document.getElementById('detectForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            formData.append('file', document.getElementById('detectImage').files[0]);
+            
+            fetch('/detect-face/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultDiv = document.getElementById('detectResult');
+                const summaryElement = document.getElementById('detectionSummary');
+                const imgContainer = document.getElementById('resultImageContainer');
+                const resultImage = document.getElementById('resultImage');
+                
+                if (data.error) {
+                    summaryElement.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                    resultImage.style.display = 'none';
+                } else {
+                    // Clear previous face boxes
+                    Array.from(imgContainer.querySelectorAll('.face-box')).forEach(box => box.remove());
+                    
+                    // Set the image source
+                    resultImage.src = '/' + data.image_path;
+                    resultImage.style.display = 'block';
+                    
+                    // Show summary
+                    summaryElement.innerHTML = `<p>Detected ${data.detected_faces} face(s) in the image.</p>`;
+                    
+                    // Wait for the image to load to get its dimensions
+                    resultImage.onload = function() {
+                        // Get the scaling factors
+                        const imgWidth = resultImage.offsetWidth;
+                        const imgHeight = resultImage.offsetHeight;
+                        const widthRatio = imgWidth / resultImage.naturalWidth;
+                        const heightRatio = imgHeight / resultImage.naturalHeight;
+                        
+                        // Add boxes for each detected face
+                        data.identified_faces.forEach(face => {
+                            const box = document.createElement('div');
+                            box.className = 'face-box';
+                            
+                            // Scale the box to match the displayed image size
+                            const scaledLeft = face.location.left * widthRatio;
+                            const scaledTop = face.location.top * heightRatio;
+                            const scaledWidth = (face.location.right - face.location.left) * widthRatio;
+                            const scaledHeight = (face.location.bottom - face.location.top) * heightRatio;
+                            
+                            box.style.left = `${scaledLeft}px`;
+                            box.style.top = `${scaledTop}px`;
+                            box.style.width = `${scaledWidth}px`;
+                            box.style.height = `${scaledHeight}px`;
+                            
+                            // Add name label
+                            const label = document.createElement('div');
+                            label.className = 'face-label';
+                            label.innerHTML = `${face.name} (${(face.confidence * 100).toFixed(2)}%)`;
+                            box.appendChild(label);
+                            
+                            imgContainer.appendChild(box);
+                        });
+                    };
+                }
+                
+                resultDiv.style.display = 'block';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('detectionSummary').innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                document.getElementById('detectResult').style.display = 'block';
+                document.getElementById('resultImage').style.display = 'none';
+            });
+        });
+        
+        function fetchKnownFaces() {
+            fetch('/known-faces/')
+                .then(response => response.json())
+                .then(data => {
+                    const facesList = document.getElementById('knownFacesList');
+                    facesList.innerHTML = '';
+                    
+                    data.forEach(face => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            ${face}
+                            <button class="delete-btn" onclick="deleteFace('${face}')">Delete</button>
+                        `;
+                        facesList.appendChild(li);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching known faces:', error);
+                });
+        }
+        
+        function deleteFace(name) {
+            if (confirm(`Are you sure you want to delete ${name} from known faces?`)) {
+                fetch(`/known-faces/${name}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(`Error: ${data.error}`);
+                    } else {
+                        alert(`Successfully deleted ${name} from known faces.`);
+                        fetchKnownFaces();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert(`Error: ${error.message}`);
+                });
+            }
+        }
+        
+        // Webcam functionality
+        let webcamRunning = false;
+        let websocket = null;
+        let videoStream = null;
+        let webcamCanvas = document.createElement('canvas');
+        let webcamContext = webcamCanvas.getContext('2d');
+        const webcamElement = document.getElementById('webcam');
+        const webcamOverlay = document.getElementById('webcamOverlay');
+        const webcamStatus = document.getElementById('webcamStatus');
+        const startWebcamBtn = document.getElementById('startWebcam');
+        const stopWebcamBtn = document.getElementById('stopWebcam');
+        
+        startWebcamBtn.addEventListener('click', startWebcam);
+        stopWebcamBtn.addEventListener('click', stopWebcam);
+        
+        function startWebcam() {
+            if (webcamRunning) return;
+            
+            // Access the webcam
+            navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    facingMode: "user"
+                } 
+            })
+            .then(stream => {
+                videoStream = stream;
+                webcamElement.srcObject = stream;
+                
+                // Wait for video to be ready
+                webcamElement.onloadedmetadata = () => {
+                    webcamElement.play();
+                    
+                    // Set canvas size to match video
+                    webcamCanvas.width = webcamElement.videoWidth;
+                    webcamCanvas.height = webcamElement.videoHeight;
+                    
+                    // Set overlay to match video dimensions
+                    webcamOverlay.style.width = `${webcamElement.offsetWidth}px`;
+                    webcamOverlay.style.height = `${webcamElement.offsetHeight}px`;
+                    
+                    // Connect to WebSocket
+                    connectWebSocket();
+                    
+                    webcamRunning = true;
+                    startWebcamBtn.disabled = true;
+                    stopWebcamBtn.disabled = false;
+                    
+                    webcamStatus.innerHTML = '<p style="color: green;">Webcam started. Face detection active.</p>';
+                    webcamStatus.style.display = 'block';
+                };
+            })
+            .catch(error => {
+                console.error('Error accessing webcam:', error);
+                webcamStatus.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+                webcamStatus.style.display = 'block';
+            });
+        }
+        
+        function stopWebcam() {
+            if (!webcamRunning) return;
+            
+            // Stop WebSocket connection
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.close();
+            }
+            
+            // Stop video stream
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+            }
+            
+            // Clear video element
+            webcamElement.srcObject = null;
+            
+            // Clear face overlays
+            webcamOverlay.innerHTML = '';
+            
+            webcamRunning = false;
+            startWebcamBtn.disabled = false;
+            stopWebcamBtn.disabled = true;
+            
+            webcamStatus.innerHTML = '<p>Webcam stopped.</p>';
+        }
+        
+        function connectWebSocket() {
+            // Close existing connection if any
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.close();
+            }
+            
+            // Create new WebSocket connection
+            const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+            const wsUrl = `${protocol}${window.location.host}/ws/detect-face-realtime/`;
+            
+            websocket = new WebSocket(wsUrl);
+            
+            websocket.onopen = () => {
+                console.log('WebSocket connection established');
+                // Start sending frames
+                sendFrames();
+            };
+            
+            websocket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.error) {
+                        console.error('Error from server:', data.error);
+                        return;
+                    }
+                    
+                    // Clear previous face boxes
+                    webcamOverlay.innerHTML = '';
+                    
+                    // Update overlay with face detection results
+                    updateFaceOverlay(data);
+                    
+                } catch (error) {
+                    console.error('Error processing WebSocket message:', error);
+                }
+            };
+            
+            websocket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                webcamStatus.innerHTML = `<p style="color: red;">WebSocket error: Connection failed</p>`;
+            };
+            
+            websocket.onclose = () => {
+                console.log('WebSocket connection closed');
+            };
+        }
+        
+        function sendFrames() {
+            // If webcam or WebSocket is not running, stop sending frames
+            if (!webcamRunning || !websocket || websocket.readyState !== WebSocket.OPEN) {
+                return;
+            }
+            
+            try {
+                // Draw current video frame to canvas
+                webcamContext.drawImage(webcamElement, 0, 0, webcamCanvas.width, webcamCanvas.height);
+                
+                // Get base64 encoded image data
+                const imageData = webcamCanvas.toDataURL('image/jpeg', 0.7);
+                
+                // Send to server
+                websocket.send(imageData);
+                
+                // Schedule next frame
+                setTimeout(sendFrames, 200);  // Adjust timing as needed (200ms = 5fps)
+                
+            } catch (error) {
+                console.error('Error sending frame:', error);
+            }
+        }
+        
+        function updateFaceOverlay(data) {
+            // Get the scaling factors
+            const videoWidth = webcamElement.videoWidth;
+            const videoHeight = webcamElement.videoHeight;
+            const displayWidth = webcamElement.offsetWidth;
+            const displayHeight = webcamElement.offsetHeight;
+            
+            const widthRatio = displayWidth / videoWidth;
+            const heightRatio = displayHeight / videoHeight;
+            
+            // Add boxes for each detected face
+            data.identified_faces.forEach(face => {
+                const box = document.createElement('div');
+                box.className = 'face-box';
+                
+                // Scale the box to match the displayed video size
+                const scaledLeft = face.location.left * widthRatio;
+                const scaledTop = face.location.top * heightRatio;
+                const scaledWidth = (face.location.right - face.location.left) * widthRatio;
+                const scaledHeight = (face.location.bottom - face.location.top) * heightRatio;
+                
+                box.style.left = `${scaledLeft}px`;
+                box.style.top = `${scaledTop}px`;
+                box.style.width = `${scaledWidth}px`;
+                box.style.height = `${scaledHeight}px`;
+                
+                // Add name label
+                const label = document.createElement('div');
+                label.className = 'face-label';
+                label.innerHTML = `${face.name} (${(face.confidence * 100).toFixed(2)}%)`;
+                box.appendChild(label);
+                
+                webcamOverlay.appendChild(box);
+            });
+        }
+    </script>
+</body>
+</html>
